@@ -11,6 +11,7 @@
 #include <fstream>
 
 // LArSoft includes
+#include "larcoreobj/SimpleTypesAndConstants/geo_types.h"
 #include "larevt/SpaceCharge/SpaceChargeStandard.h"
 
 // Framework includes
@@ -190,28 +191,63 @@ bool spacecharge::SpaceChargeStandard::EnableCalEfieldSCE() const
 
 //----------------------------------------------------------------------------
 /// Primary working method of service that provides position offsets to be
-/// used in ionization electron drift
+/// used to get apparent position in ionization electron drift calculations.
+//
+///   GetPosOffset(true point) + true point = apparent position after drift
+///
+/// All values are in global coordinates, so method must use drift direction
+/// This method just calculates the TPC ID, then calls the version that takes
+/// the ID as an argument
 geo::Vector_t spacecharge::SpaceChargeStandard::GetPosOffsets(geo::Point_t const& point) const
+{
+  //std::vector<double> thePosOffsets;
+  geo::Vector_t thePosOffsets;
+  
+  // Experiment code needs to determine the TPC ID here, then call the 
+  // TPC ID-specific GetPosOffsets method. 
+  // Since this implementation is just an example that does nothing, 
+  // we use a default constructed (and therefore invalid) TPC ID
+
+  // (Fake) check to see if point is inside a TPC. This would be 
+  // considered part of the TPC ID calculation.
+  if (IsInsideBoundaries(point.X(), point.Y(), point.Z()) == false) {
+    thePosOffsets = {0.0, 0.0, 0.0};
+  }
+  else {
+    geo::TPCID tpcid;
+    thePosOffsets = GetPosOffsets(point, tpcid);
+
+    // if (fRepresentationType == "Parametric")
+    //   geo::TPCID tpcid; // default constructed here. Expt code needs to calculate it!!
+    //   thePosOffsets = GetPosOffsets(point, tpcid);;
+    // 
+    // 
+    //   thePosOffsets = GetPosOffsetsParametric(point.X(), point.Y(), point.Z(), tpcid);
+    // else
+    //   thePosOffsets.resize(3, 0.0);
+  }
+
+  return thePosOffsets;
+}
+
+geo::Vector_t spacecharge::SpaceChargeStandard::GetPosOffsets(geo::Point_t const& point, geo::TPCID const& tpcid) const
 {
   std::vector<double> thePosOffsets;
 
-  if (IsInsideBoundaries(point.X(), point.Y(), point.Z()) == false) {
-    thePosOffsets.resize(3, 0.0);
+  if (fRepresentationType == "Parametric") {
+    geo::TPCID tpcid; // default constructed here. Expt code needs to calculate it!!
+ 
+    thePosOffsets = GetPosOffsetsParametric(point.X(), point.Y(), point.Z(), tpcid);
   }
   else {
-    if (fRepresentationType == "Parametric")
-      thePosOffsets = GetPosOffsetsParametric(point.X(), point.Y(), point.Z());
-    else
-      thePosOffsets.resize(3, 0.0);
+    thePosOffsets.resize(3, 0.0);
   }
-
-  return {thePosOffsets[0], thePosOffsets[1], thePosOffsets[2]};
+  return {thePosOffsets[0],thePosOffsets[1],thePosOffsets[2]};
 }
 
 geo::Vector_t spacecharge::SpaceChargeStandard::GetCalPosOffsets(geo::Point_t const& point,
                                                                  int const& TPCid) const
 {
-
   return {0., 0., 0.};
 }
 
@@ -219,14 +255,17 @@ geo::Vector_t spacecharge::SpaceChargeStandard::GetCalPosOffsets(geo::Point_t co
 /// Provides position offsets using a parametric representation
 std::vector<double> spacecharge::SpaceChargeStandard::GetPosOffsetsParametric(double xVal,
                                                                               double yVal,
-                                                                              double zVal) const
+                                                                              double zVal,
+                                                                              geo::TPCID const& tpcid) const
 {
   std::vector<double> thePosOffsetsParametric;
 
+  // Scale input variables. Detector-dependent.
   double xValNew = TransformX(xVal);
   double yValNew = TransformY(yVal);
   double zValNew = TransformZ(zVal);
 
+  // Ignoring TPCID for this example code
   thePosOffsetsParametric.push_back(GetOnePosOffsetParametric(xValNew, yValNew, zValNew, "X"));
   thePosOffsetsParametric.push_back(GetOnePosOffsetParametric(xValNew, yValNew, zValNew, "Y"));
   thePosOffsetsParametric.push_back(GetOnePosOffsetParametric(xValNew, yValNew, zValNew, "Z"));

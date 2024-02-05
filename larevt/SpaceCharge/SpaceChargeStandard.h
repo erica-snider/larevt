@@ -27,6 +27,11 @@ class TGraph;
 #include <string>
 #include <vector>
 
+// Forward declarations
+namespace geo {
+  class TPCID;
+}
+
 namespace spacecharge {
 
   class SpaceChargeStandard : public SpaceCharge {
@@ -45,14 +50,31 @@ namespace spacecharge {
     bool EnableCalSpatialSCE() const override;
     bool EnableCalEfieldSCE() const override;
 
-    geo::Vector_t GetPosOffsets(geo::Point_t const& point) const override;
-    geo::Vector_t GetEfieldOffsets(geo::Point_t const& point) const override;
-    geo::Vector_t GetCalPosOffsets(geo::Point_t const& point, int const& TPCid) const override;
+    /// GetPosOffset(true point) + true point = apparent position after drift
+    /// All values are in global coordinates, so method is aware of drift direction
+    /// Note that this method must calculate the TPD ID, so is potentially expensive
+    virtual geo::Vector_t GetPosOffsets(geo::Point_t const& point) const override;
+   
+    /// GetPosOffset(true point) + true point = apparent position after drift
+    /// Preferred method when TPC ID is known
+    /// All values are in global coordinates, so method is aware of drift direction
+    virtual geo::Vector_t GetPosOffsets(geo::Point_t const& point, geo::TPCID const& tpcID) const override;
+   
+    /// Nom Efield vector + mag(Efield) * GetEfieldOffsets(true point) = Actual Efield at true point
+    /// All values are in global coordinates
+    virtual geo::Vector_t GetEfieldOffsets(geo::Point_t const& point) const override;
+    
+    /// GetCalPosOffsets(measured point, TPC ID) + measured point = estimated true position
+    /// All values are in global coorinates, so method is aware of drift direction for given TPC ID
+    virtual geo::Vector_t GetCalPosOffsets(geo::Point_t const& point, int const& TPCid) const override;
+    
+    // To get corrected field at measured point, first calculate estimated true position, 
+    // then get Efield offsets for that position
     geo::Vector_t GetCalEfieldOffsets(geo::Point_t const& point, int const& TPCid) const override;
-
+  
   private:
   protected:
-    std::vector<double> GetPosOffsetsParametric(double xVal, double yVal, double zVal) const;
+    std::vector<double> GetPosOffsetsParametric(double xVal, double yVal, double zVal, geo::TPCID const& id) const;
     double GetOnePosOffsetParametric(double xVal, double yVal, double zVal, std::string axis) const;
     std::vector<double> GetEfieldOffsetsParametric(double xVal, double yVal, double zVal) const;
     double GetOneEfieldOffsetParametric(double xVal,
