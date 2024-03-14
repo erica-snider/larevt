@@ -62,21 +62,30 @@ namespace spacecharge {
    
     /// Nom Efield vector + mag(Efield) * GetEfieldOffsets(true point) = Actual Efield at true point
     /// All values are in global coordinates
+    /// Note that this method must calculate the TPD ID, so is potentially expensive
     virtual geo::Vector_t GetEfieldOffsets(geo::Point_t const& point) const override;
     
+    /// Nom Efield vector + mag(Efield) * GetEfieldOffsets(true point) = Actual Efield at true point
+    /// Preferred method when the TPC ID is known
+    /// All values are in global coordinates, so method is aware of drift direction
+    virtual geo::Vector_t GetEfieldOffsets(geo::Point_t const& point, geo::TPCID const& tpcID) const override;
+
     /// GetCalPosOffsets(measured point, TPC ID) + measured point = estimated true position
     /// All values are in global coorinates, so method is aware of drift direction for given TPC ID
-    virtual geo::Vector_t GetCalPosOffsets(geo::Point_t const& point, int const& TPCid) const override;
+    virtual geo::Vector_t GetCalPosOffsets(geo::Point_t const& point, geo::TPCID const& tpcID) const override;
     
     // To get corrected field at measured point, first calculate estimated true position, 
-    // then get Efield offsets for that position
-    geo::Vector_t GetCalEfieldOffsets(geo::Point_t const& point, int const& TPCid) const override;
+    // then get Efield offsets for that position 
+    // Preferred method is to get estimated true position, then call GetEfieldOffsets
+    geo::Vector_t GetCalEfieldOffsets(geo::Point_t const& point, geo::TPCID const& tpcID) const override;
   
   private:
   protected:
     std::vector<double> GetPosOffsetsParametric(double xVal, double yVal, double zVal, geo::TPCID const& id) const;
+    
+    // Note that this example code ignores TPCID when returning position offsets
     double GetOnePosOffsetParametric(double xVal, double yVal, double zVal, std::string axis) const;
-    std::vector<double> GetEfieldOffsetsParametric(double xVal, double yVal, double zVal) const;
+    std::vector<double> GetEfieldOffsetsParametric(double xVal, double yVal, double zVal, geo::TPCID const& tpcid) const;
     double GetOneEfieldOffsetParametric(double xVal,
                                         double yVal,
                                         double zVal,

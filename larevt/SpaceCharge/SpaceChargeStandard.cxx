@@ -214,7 +214,9 @@ geo::Vector_t spacecharge::SpaceChargeStandard::GetPosOffsets(geo::Point_t const
     thePosOffsets = {0.0, 0.0, 0.0};
   }
   else {
-    geo::TPCID tpcid;
+    // In general, would need to calculate the TPCID here, but can just make one up
+    // since this is just example code 
+    geo::TPCID tpcid{0,0};
     thePosOffsets = GetPosOffsets(point, tpcid);
 
     // if (fRepresentationType == "Parametric")
@@ -234,9 +236,7 @@ geo::Vector_t spacecharge::SpaceChargeStandard::GetPosOffsets(geo::Point_t const
 {
   std::vector<double> thePosOffsets;
 
-  if (fRepresentationType == "Parametric") {
-    geo::TPCID tpcid; // default constructed here. Expt code needs to calculate it!!
- 
+  if (bool(tpcid) && fRepresentationType == "Parametric") { 
     thePosOffsets = GetPosOffsetsParametric(point.X(), point.Y(), point.Z(), tpcid);
   }
   else {
@@ -246,7 +246,7 @@ geo::Vector_t spacecharge::SpaceChargeStandard::GetPosOffsets(geo::Point_t const
 }
 
 geo::Vector_t spacecharge::SpaceChargeStandard::GetCalPosOffsets(geo::Point_t const& point,
-                                                                 int const& TPCid) const
+                                                                 geo::TPCID const& tpcid) const
 {
   return {0., 0., 0.};
 }
@@ -258,7 +258,7 @@ std::vector<double> spacecharge::SpaceChargeStandard::GetPosOffsetsParametric(do
                                                                               double zVal,
                                                                               geo::TPCID const& tpcid) const
 {
-  std::vector<double> thePosOffsetsParametric;
+  std::vector<double> thePosOffsetsParametric{};
 
   // Scale input variables. Detector-dependent.
   double xValNew = TransformX(xVal);
@@ -387,20 +387,42 @@ double spacecharge::SpaceChargeStandard::GetOnePosOffsetParametric(double xValNe
 //----------------------------------------------------------------------------
 /// Primary working method of service that provides E field offsets to be
 /// used in charge/light yield calculation (e.g.)
+/// This method must calculate the TPCID, so is potentially expensive
 geo::Vector_t spacecharge::SpaceChargeStandard::GetEfieldOffsets(geo::Point_t const& point) const
+{
+  std::vector<double> theEfieldOffsets{3,0.0};
+
+  // NOTE:  experiements should determine the TPC ID, then call the method that takes that 
+  // as an argument. Since this is example code, we'll just default construct one and call 
+  // the parametric correction, which should also take the TPCID as an argument
+  geo::TPCID tpcid;
+  if (fRepresentationType == "Parametric") {
+    theEfieldOffsets = GetEfieldOffsetsParametric(point.X(), point.Y(), point.Z(), tpcid);
+  }
+  
+  // NOTE that these minus signs are part of the particular E-field mapping implementation.
+  // The convention is to add the scaled offset to the nominal field.
+  return {-theEfieldOffsets[0], -theEfieldOffsets[1], -theEfieldOffsets[2]};
+}
+
+/// Primary working method of service that provides E field offsets to be
+/// used in charge/light yield calculation (e.g.)
+/// The preferred method when the TPCID is known
+geo::Vector_t spacecharge::SpaceChargeStandard::GetEfieldOffsets(geo::Point_t const& point, geo::TPCID const& tpcid) const
 {
   std::vector<double> theEfieldOffsets;
 
   if (fRepresentationType == "Parametric")
-    theEfieldOffsets = GetEfieldOffsetsParametric(point.X(), point.Y(), point.Z());
+    theEfieldOffsets = GetEfieldOffsetsParametric(point.X(), point.Y(), point.Z(), tpcid);
   else
     theEfieldOffsets.resize(3, 0.0);
 
+  // NOTE that these minus signs are part of the particular E-field mapping implementation.
+  // The convention is to add the scaled offset to the nominal field.
   return {-theEfieldOffsets[0], -theEfieldOffsets[1], -theEfieldOffsets[2]};
 }
-
 geo::Vector_t spacecharge::SpaceChargeStandard::GetCalEfieldOffsets(geo::Point_t const& point,
-                                                                    int const& TPCid) const
+                                                                    geo::TPCID const& tpcID) const
 {
 
   return {0., 0., 0.};
@@ -410,7 +432,8 @@ geo::Vector_t spacecharge::SpaceChargeStandard::GetCalEfieldOffsets(geo::Point_t
 /// Provides E field offsets using a parametric representation
 std::vector<double> spacecharge::SpaceChargeStandard::GetEfieldOffsetsParametric(double xVal,
                                                                                  double yVal,
-                                                                                 double zVal) const
+                                                                                 double zVal,
+                                                                                 geo::TPCID const& tpcid) const
 {
   std::vector<double> theEfieldOffsetsParametric;
 
